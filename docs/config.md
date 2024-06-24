@@ -175,6 +175,11 @@ config file at runtime.
   - [`DNS`](#dns)
     - [`DNS.Resolvers`](#dnsresolvers)
     - [`DNS.MaxCacheTTL`](#dnsmaxcachettl)
+  - [`Import`](#import)
+    - [`Import.CidVersion`](#importcidversion)
+    - [`Import.UnixFSRawLeaves`](#importunixfsrawleaves)
+    - [`Import.UnixFSChunker`](#importunixfschunker)
+    - [`Import.HashFunction`](#importhashfunction)
 
 ## Profiles
 
@@ -264,6 +269,21 @@ documented in `ipfs config profile --help`.
   - Disables AutoNAT.
 
   Use this profile with caution.
+
+- `legacy-cid-v0`
+
+  Makes UnixFS import (`ipfs add`) produce legacy CIDv0 with no raw leaves, sha2-256 and 256 KiB chunks.
+
+  > [!WARNING]
+  > This profile is provided for legacy users and should not be used for new projects.
+
+- `test-cid-v1`
+
+  Makes UnixFS import (`ipfs add`) produce modern CIDv1 with raw leaves, sha2-256 and 1 MiB chunks.
+
+  > [!NOTE]
+  > This profile will become the new implicit default, provided for testing purposes.
+  > Follow [kubo#4143](https://github.com/ipfs/kubo/issues/4143) for more details.
 
 ## Types
 
@@ -1503,7 +1523,9 @@ Type: `optionalDuration` (unset for the default)
 Tells reprovider what should be announced. Valid strategies are:
 
 - `"all"` - announce all CIDs of stored blocks
+  - Order: root blocks of direct and recursive pins are announced first, then the rest of blockstore
 - `"pinned"` - only announce pinned CIDs recursively (both roots and child blocks)
+  - Order: root blocks of direct and recursive pins are announced first, then the child blocks of recursive pins
 - `"roots"` - only announce the root block of explicitly pinned CIDs
   - **⚠️  BE CAREFUL:** node with `roots` strategy will not announce child blocks.
     It makes sense only for use cases where the entire DAG is fetched in full,
@@ -1512,6 +1534,7 @@ Tells reprovider what should be announced. Valid strategies are:
     providers for the missing block in the middle of a file, unless the peer
     happens to already be connected to a provider and ask for child CID over
     bitswap.
+- `"flat"` - same as `all`, announce all CIDs of stored blocks, but without prioritizing anything
 
 Default: `"all"`
 
@@ -2374,3 +2397,41 @@ Note: this does NOT work with Go's default DNS resolver. To make this a global s
 Default: Respect DNS Response TTL
 
 Type: `optionalDuration`
+
+## `Import`
+
+Options to configure the default options used for ingesting data, in commands such as `ipfs add` or `ipfs block put`. All affected commands are detailed per option.
+
+Note that using flags will override the options defined here.
+
+### `Import.CidVersion`
+
+The default CID version. Commands affected: `ipfs add`.
+
+Default: `0`
+
+Type: `optionalInteger`
+
+### `Import.UnixFSRawLeaves`
+
+The default UnixFS raw leaves option. Commands affected: `ipfs add`, `ipfs files write`.
+
+Default: `false` if `CidVersion=0`; `true` if `CidVersion=1`
+
+Type: `flag`
+
+### `Import.UnixFSChunker`
+
+The default UnixFS chunker. Commands affected: `ipfs add`.
+
+Default: `size-262144`
+
+Type: `optionalString`
+
+### `Import.HashFunction`
+
+The default hash function. Commands affected: `ipfs add`, `ipfs block put`, `ipfs dag put`.
+
+Default: `sha2-256`
+
+Type: `optionalString`
